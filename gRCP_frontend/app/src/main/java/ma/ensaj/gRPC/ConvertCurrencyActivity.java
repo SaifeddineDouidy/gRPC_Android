@@ -1,66 +1,98 @@
-package ma.ensaj.protobufapp;
-
-import androidx.appcompat.app.AppCompatActivity;
+package ma.ensaj.gRPC;
 
 import android.os.Bundle;
 import android.util.Log;
-import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 
 import java.util.concurrent.TimeUnit;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
+import ma.ensaj.gRPC.R;
 import ma.project.stubs.Bank;
 import ma.project.stubs.BankServiceGrpc;
 
 public class ConvertCurrencyActivity extends AppCompatActivity {
 
-    private EditText etAmount, etCurrencyFrom, etCurrencyTo;
+    private TextInputEditText etAmount;
+    private AutoCompleteTextView etCurrencyFrom, etCurrencyTo;
+    private MaterialButton btnConvert;
     private TextView tvResult;
-    private Button btnConvert;
+    private ImageButton btnSwapCurrencies;
 
     private ManagedChannel channel;
     private BankServiceGrpc.BankServiceBlockingStub stub;
+
+    // List of supported currencies
+    private static final String[] CURRENCIES = {
+            "USD", "EUR", "GBP", "JPY", "CAD",
+            "AUD", "CHF", "CNY", "INR", "BRL"
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_convert_currency);
 
-        // Initialize UI elements
-        etAmount = findViewById(R.id.et_amount);
-        etCurrencyFrom = findViewById(R.id.et_currency_from);
-        etCurrencyTo = findViewById(R.id.et_currency_to);
-        tvResult = findViewById(R.id.tv_result);
+        // Initialize views
+        etAmount = findViewById(R.id.input_from_amount);
+        etCurrencyFrom = findViewById(R.id.input_from_currency);
+        etCurrencyTo = findViewById(R.id.input_to_currency);
         btnConvert = findViewById(R.id.btn_convert);
+        tvResult = findViewById(R.id.text_result);
+        btnSwapCurrencies = findViewById(R.id.btn_swap_currencies);
 
-        // Set up gRPC channel
+        // Setup currency dropdowns
+        setupCurrencyDropdowns();
+
+        // Setup gRPC channel
         setupGrpcChannel();
 
-        // Button click listener
-        btnConvert.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                convertCurrency();
-            }
-        });
+        // Convert button listener
+        btnConvert.setOnClickListener(v -> convertCurrency());
+
+        // Swap currencies button listener
+        btnSwapCurrencies.setOnClickListener(v -> swapCurrencies());
+    }
+
+    private void setupCurrencyDropdowns() {
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                this,
+                android.R.layout.simple_dropdown_item_1line,
+                CURRENCIES
+        );
+
+        etCurrencyFrom.setAdapter(adapter);
+        etCurrencyTo.setAdapter(adapter);
+    }
+
+    private void swapCurrencies() {
+        String from = etCurrencyFrom.getText().toString();
+        String to = etCurrencyTo.getText().toString();
+
+        etCurrencyFrom.setText(to);
+        etCurrencyTo.setText(from);
     }
 
     private void setupGrpcChannel() {
         try {
-            // Use 10.0.2.2 for Android emulator to access the host machine
             channel = ManagedChannelBuilder.forAddress("192.168.1.158", 5555)
-                    .usePlaintext() // This ensures HTTP/2 without TLS
+                    .usePlaintext()
                     .keepAliveTimeout(30, TimeUnit.SECONDS)
                     .keepAliveTime(30, TimeUnit.SECONDS)
                     .build();
 
-            // Create a blocking stub for synchronous calls
             stub = BankServiceGrpc.newBlockingStub(channel);
 
         } catch (Exception e) {
@@ -70,11 +102,11 @@ public class ConvertCurrencyActivity extends AppCompatActivity {
     }
 
     private void convertCurrency() {
-        // Get input values
         String amountStr = etAmount.getText().toString();
         String currencyFrom = etCurrencyFrom.getText().toString();
         String currencyTo = etCurrencyTo.getText().toString();
 
+        // Validation
         if (amountStr.isEmpty() || currencyFrom.isEmpty() || currencyTo.isEmpty()) {
             Toast.makeText(this, "Please fill in all fields", Toast.LENGTH_SHORT).show();
             return;
@@ -95,11 +127,17 @@ public class ConvertCurrencyActivity extends AppCompatActivity {
                 .setCurrencyTo(currencyTo)
                 .build();
 
+        // Perform conversion in background thread
         new Thread(() -> {
             try {
                 Bank.ConvertCurrencyResponse response = stub.convert(request);
 
-                runOnUiThread(() -> tvResult.setText("Converted Amount: " + response.getResult()));
+                runOnUiThread(() -> {
+                    String resultText = String.format("%s %s = %s %s",
+                            amountStr, currencyFrom,
+                            String.format("%.2f", response.getResult()), currencyTo);
+                    tvResult.setText(resultText);
+                });
 
             } catch (StatusRuntimeException e) {
                 Log.e("gRPC Error", "Error calling gRPC: " + e.getMessage(), e);

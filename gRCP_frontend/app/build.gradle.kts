@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "ma.ensaj.protobufapp"
+    namespace = "ma.ensaj.gRPC"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "ma.ensaj.protobufapp"
+        applicationId = "ma.ensaj.gRPC"
         minSdk = 31
         targetSdk = 34
         versionCode = 1

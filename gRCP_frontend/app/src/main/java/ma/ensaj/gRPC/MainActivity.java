@@ -1,4 +1,4 @@
-package ma.ensaj.protobufapp;
+package ma.ensaj.gRPC;
 
 import androidx.appcompat.app.AppCompatActivity;
 

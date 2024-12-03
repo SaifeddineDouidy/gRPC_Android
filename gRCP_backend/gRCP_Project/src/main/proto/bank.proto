@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package ma.project.stubs;
+
+service BankService {
+  rpc convert (ConvertCurrencyRequest) returns (ConvertCurrencyResponse) ;
+  rpc getCurrencyStream (ConvertCurrencyRequest) returns (stream
+      ConvertCurrencyResponse) ;
+  rpc performStream (stream ConvertCurrencyRequest) returns
+      (ConvertCurrencyResponse) ;
+  rpc fullCurrencyStream (stream ConvertCurrencyRequest) returns (stream
+      ConvertCurrencyResponse) ;}
+
+message ConvertCurrencyRequest {
+  string currency_from = 1;
+  string currency_to = 2;
+  double amount = 3;
+}
+
+message ConvertCurrencyResponse {
+  string currency_from = 1;
+  string currency_to = 2;
+  double amount = 3;
+  double result = 4;
+}
